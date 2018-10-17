@@ -28,19 +28,11 @@ function Install-OktaAwsCli {
     } else {
         New-Item -ItemType Directory -Path $HOME\.okta
     }
-    New-Item -ItemType File -Path $HOME\.okta\uptodate | Out-Null
-    # .NET apparently doesn't default to TLS 1.2 and GitHub requires it
-    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
-    $LatestReleaseResponse = Invoke-RestMethod -Uri "https://api.github.com/repos/oktadeveloper/okta-aws-cli-assume-role/releases/latest"
-    $Asset = $LatestReleaseResponse.assets | Where-Object { $_.content_type -eq "application/java-archive" }
-    $Client = New-Object System.Net.WebClient
-    $Client.DownloadFile($Asset.browser_download_url, "$Home\.okta\okta-aws-cli.jar")
     Add-Content -Path $Home/.okta/config.properties -Value "
 #OktaAWSCLI
-OKTA_ORG=acmecorp.okta.com.changeme.local
-OKTA_AWS_APP_URL=https://acmecorp.oktapreview.com.changeme.local/home/amazon_aws/0oa5zrwfs815KJmVF0h7/137
+OKTA_ORG=clq.okta.com
+OKTA_AWS_APP_URL=https://clq.okta.com/home/amazon_aws/0oangh6wv2zucPviH296/272
 OKTA_USERNAME=$env:USERNAME
-OKTA_BROWSER_AUTH=true
 "
     if (!(Test-Path $profile)) {
         New-Item -Path $profile -ItemType File -Force
@@ -69,21 +61,9 @@ function With-Okta {
         $env:OKTA_PROFILE = $OriginalOKTA_PROFILE
     }
 }
-function Okta-ListRoles {
-    $InternetOptions = Get-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings"
-    if ($InternetOptions.ProxyServer) {
-        ($ProxyHost, $ProxyPort) = $InternetOptions.ProxyServer.Split(":")
-    }
-    if ($InternetOptions.ProxyOverride) {
-        $NonProxyHosts = [System.String]::Join("|", ($InternetOptions.ProxyOverride.Replace("<local>", "").Split(";") | Where-Object {$_}))
-    } else {
-        $NonProxyHosts = ""
-    }
-    java "-Dhttp.proxyHost=$ProxyHost" "-Dhttp.proxyPort=$ProxyPort" "-Dhttps.proxyHost=$ProxyHost" "-Dhttps.proxyPort=$ProxyPort" "-Dhttp.nonProxyHosts=$NonProxyHosts" -classpath $HOME\.okta\* com.okta.tools.ListRoles
-}
 function okta-aws {
     Param([string]$Profile)
-    With-Okta -Profile $Profile aws --profile $Profile @args
+    With-Okta -Profile $Profile aws.cmd --profile $Profile @args
 }
 function okta-sls {
     Param([string]$Profile)
@@ -92,5 +72,6 @@ function okta-sls {
 '
     }
 }
-
 Install-OktaAwsCli
+Copy-Item "..\out\okta-aws-cli-1.0.4.jar" -Destination "$Home\.okta\okta-aws-cli.jar"
+.$PROFILE
